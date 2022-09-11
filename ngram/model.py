@@ -22,6 +22,10 @@ class NGramModel:
         :param str model_path: Path to the model location
 
         """
+        # We use n-1 tokens to predict n-th token so in case n < 2 we will not be able to make a prediction
+        if n < 2:
+            print("Error: n parameter must be bigger than 1")
+            exit(1)
         self.n = n
         self.model_path = model_path
         self.model = defaultdict(init_dict)
@@ -29,6 +33,7 @@ class NGramModel:
     def __read_text(self, data_path: str):
         """
         Read all text files in order to prepare data for the model training.
+        If data_path is None, read text from stdin.
 
         :param data_path: Path to the directory where all text files are located
 
@@ -179,7 +184,7 @@ class NGramModel:
 
         # Prepare first (n-1)-gram. If prefix has more tokens than n-1,
         # we locate in the first gram only n-1 last tokens. If prefix length is shorter than n-1, we locate
-        # all prefix in the end of (n-1)-gram - the beginning will be filled in code below.
+        # all prefix in the end of (n-1)-gram - the beginning will be filled in the code below.
         index = len(tokens_seq) - self.n + 1
         if index < 0:
             index = 0
@@ -190,7 +195,7 @@ class NGramModel:
             nlessgram.extendleft(['#'] * first_token_idx)
 
         # New tokens generation.
-        # If we run into unknown (n-1)-gram (if it is not present in the model - in most cases it
+        # If we run into unknown (n-1)-gram (if it is not presented in the model - in most cases it
         # happens only in the begging during prefix processing), we shorten (n-1)-gram (prefix) from the
         # left side and try to find it in the model again.
         # When we find current (n-1)-gram in the model, we get possible next tokens and choose randomly one of them

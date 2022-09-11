@@ -7,9 +7,16 @@ import torch.nn.functional as F
 import json
 import numpy as np
 import random
+from typing import List
 
 
-def upload_data(model_path):
+def upload_data(model_path: str):
+    """
+    Upload data that will be used during text generation by the model.
+
+    :param str model_path: Path to the model location
+
+    """
     if not os.path.exists("useful_data.json"):
         print("Could not find file with data for model usage")
         exit(1)
@@ -26,7 +33,17 @@ def upload_data(model_path):
     return model, vocab, useful_data
 
 
-def generate(model_path, prefix, length):
+def generate(model_path: str,
+             prefix: List[str],
+             length: int):
+    """
+    Generate text based on prefix.
+
+    :param str model_path: Path where the model will be saved after training
+    :param List[str] prefix: List of words that will be used as the beginning of future text
+    :param int length: Length of future text
+
+    """
     model, vocab, useful_data = upload_data(model_path)
     inv_vocab = {v: k for k, v in vocab.items()}
     if prefix is None or len(prefix) == 0:

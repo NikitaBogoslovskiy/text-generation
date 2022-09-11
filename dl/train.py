@@ -6,15 +6,33 @@ import re
 import argparse
 import sys
 import json
+from typing import List
+import random
 
 
 class NGramBlock:
-    def __init__(self, context, target):
+    def __init__(self,
+                 context: List[int],
+                 target: List[int]):
+        """
+        Create instance of NGramBlock which will be used for the model training. Helps to compare neural
+        network output with target result during loss calculation.
+
+        :param List[int] context: List of encoded words that were taken from the text from k to l indices
+        :param List[int] target: List of encoded words that were taken from the text from k+1 to l+1 indices
+
+        """
         self.context = context
         self.target = target
 
 
-def read_text(path=None):
+def read_text(path: str = None):
+    """
+    Read all text files from defined directory in path variable and lead it to lowercase.
+
+    :param str path: Path to the directory with collection of text files for the model training
+
+    """
     text = ""
     if path is None:
         text = sys.stdin.read().lower()
@@ -28,7 +46,13 @@ def read_text(path=None):
     return text
 
 
-def normalize_text(text):
+def normalize_text(text: str):
+    """
+    Process input text leaving only Russian words.
+
+    :param str text: Text that is going to be processed
+
+    """
     new_text = ""
     for i in range(len(text)):
         ch = text[i]
@@ -40,7 +64,16 @@ def normalize_text(text):
     return new_text
 
 
-def get_vocab_and_ngram(text, window_size):
+def get_vocab_and_ngram(text: str,
+                        window_size: int):
+    """
+    Return dictionary with all possible words from training data and corresponding unique indices.
+    Return list on n-grams that will be used during model training.
+
+    :param str text: Input normalized text
+    :param int window_size: Length of words sequence that will be transferred to LSTM-layer in the model
+
+    """
     words = text.split()
     words.append("UNK")
     vocab = {word: i for i, word in enumerate(set(words))}
@@ -55,7 +88,18 @@ def get_vocab_and_ngram(text, window_size):
     return vocab, ngram
 
 
-def prepare_data(ngram, batch_size, train_coef=0.99):
+def prepare_data(ngram: List["NGramBlock"],
+                 batch_size: int,
+                 train_coef: float = 0.99):
+    """
+    Divide data into batches and train/test sets. Convert to torch tensors.
+
+    :param List["NGramBlock"] ngram: List of n-grams
+    :param int batch_size: Size of batch that will be transferred to the model as the input
+    :param float train_coef: The size of the data share for training (changes from 0 to 1)
+
+    """
+    random.shuffle(ngram)
     train_contexts = []
     train_targets = []
     overall_amount = len(ngram)
@@ -77,18 +121,44 @@ def prepare_data(ngram, batch_size, train_coef=0.99):
     return train_contexts, train_targets, test_context, test_target
 
 
-def save_model(model, path):
+def save_model(model, path: str):
+    """
+    Divide data into batches and train/test sets. Convert to torch tensors.
+
+    :param model: Trained Pytorch model
+    :param str path: Path for saving the model
+
+    """
     torch.save(model.state_dict(), path)
     print(f'Model has been saved to "{path}"')
 
 
-def save_useful_data(useful_data):
+def save_useful_data(useful_data: dict):
+    """
+    Saves some useful data including model parameters and dictionary
+    that maps all words to their integer representation (it will be used during generation).
+
+    :param dict useful_data: Dictionary of some data
+
+    """
     path = "useful_data.json"
     with open(path, 'wt') as f:
         json.dump(useful_data, f)
 
 
-def train(model_path, data_path=None, window_size=6, batch_size=500):
+def train(model_path: str,
+          data_path: str = None,
+          window_size: int = 5,
+          batch_size: int = 500):
+    """
+    Train the model.
+
+    :param str model_path: Path where the model will be saved after training
+    :param str data_path: Path to the directory with text files for training
+    :param int window_size: Length of words sequence that will be transferred to LSTM-layer in the model
+    :param int batch_size: Size of batch that will be transferred to the model as the input
+
+    """
     text = read_text(path=data_path)
     normalized_text = normalize_text(text=text)
     if len(normalized_text) == 0:
@@ -99,8 +169,8 @@ def train(model_path, data_path=None, window_size=6, batch_size=500):
 
     embedding_dim = 128
     lstm_size = 128
-    lstm_layers_num = 1
-    dropout_rate = 0
+    lstm_layers_num = 2
+    dropout_rate = 0.2
     lr = 1e-3
     model = TextGenModel(vocab_size=len(vocab),
                          embedding_dim=embedding_dim,
@@ -116,7 +186,7 @@ def train(model_path, data_path=None, window_size=6, batch_size=500):
     print("=" * 20)
     model.train()
     num_batches = len(train_contexts)
-    num_epochs = 1
+    num_epochs = 3
     for epoch in range(1, num_epochs + 1):
         print("-" * 20)
         print(f"Epoch {epoch}")
