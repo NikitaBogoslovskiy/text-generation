@@ -8,6 +8,7 @@ import sys
 import json
 from typing import List
 import random
+import time
 
 
 class NGramBlock:
@@ -186,13 +187,16 @@ def train(model_path: str,
     print("=" * 20)
     model.train()
     num_batches = len(train_contexts)
-    num_epochs = 3
-    for epoch in range(1, num_epochs + 1):
+    num_epochs = 2
+    batches_time = 0
+    batches_count = 0
+    for epoch in range(num_epochs):
         print("-" * 20)
-        print(f"Epoch {epoch}")
+        print(f"Epoch {epoch + 1}")
         print("-" * 20)
         h, c = init_state(lstm_layers_num, batch_size, lstm_size)
         for batch in range(num_batches):
+            t1 = time.time()
             context = train_contexts[batch]
             target = train_targets[batch]
             predictions, (h, c) = model(context, (h, c))
@@ -202,7 +206,13 @@ def train(model_path: str,
             loss.backward()
             opt.step()
             opt.zero_grad()
-            print(f"epoch {epoch}, batch {batch+1}: loss = {loss.item()}")
+            t2 = time.time()
+            batches_count += 1
+            batches_time += t2 - t1
+            mean_time = batches_time / batches_count
+            left_time = (num_batches - batch - 1 + (num_epochs - epoch - 1) * num_batches) * mean_time / 60
+            print(f"epoch {epoch + 1}, batch {batch + 1}: loss = {loss.item()}, "
+                  f"batch time = {int(mean_time)} sec, left time = {left_time} min")
     print("=" * 20)
     print("End of training process")
     print("=" * 20)
